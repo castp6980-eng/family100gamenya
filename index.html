@@ -416,8 +416,14 @@ function showAnswering(t){
   void el.offsetWidth; el.classList.add('go');
   clearTimeout(showAnswering.tm); showAnswering.tm = setTimeout(() => el.classList.remove('go'), 2100);
 }
-function buzz(t){
+/* Cegah "klik hantu": jari yang menekan buzzer tidak boleh ikut membuka kotak jawaban yang muncul di bawahnya */
+let blockUntil = 0;
+['pointerup','pointercancel','touchend','touchcancel','mouseup'].forEach(ev =>
+  document.addEventListener(ev, () => { if(blockUntil === Infinity) blockUntil = Date.now() + 700; }, true));
+function buzz(t, fromPointer){
   if($('game').hidden || buzzed || closed) return;
+  blockUntil = fromPointer ? Infinity : Date.now() + 700;
+  if(fromPointer) setTimeout(() => { if(blockUntil === Infinity) blockUntil = Date.now() + 700; }, 4000);
   initAc(); buzzed = t; turn = t; sndBuzz(t);
   anim($('flash'), 'g', 700); document.querySelectorAll('.top,.q').forEach(e => anim(e, 'quake', 600));
   const r = $('buzz' + t).getBoundingClientRect(); burst(50, r.left + r.width / 2, r.top + r.height / 2, true);
@@ -722,7 +728,7 @@ function showQuestion(){
         '<div class="face back"><div class="t"></div><div class="p"></div></div></button>';
       slot.querySelector('.t').textContent = a.text;
       slot.querySelector('.p').textContent = a.points;
-      slot.querySelector('button').onclick = () => reveal(i);
+      slot.querySelector('button').onclick = () => { if(Date.now() < blockUntil) return; reveal(i); };
     }
     board.appendChild(slot);
   }
@@ -796,7 +802,7 @@ function shuffle(){
 
 /* ====== EVENT ====== */
 $('btnStrike').onclick = strike;
-['A','B'].forEach(t => { const b = $('buzz' + t); b.onpointerdown = () => buzz(t); b.onclick = e => { e.stopPropagation(); buzz(t); }; });
+['A','B'].forEach(t => { const b = $('buzz' + t); b.onpointerdown = () => buzz(t, true); b.onclick = e => { e.stopPropagation(); buzz(t); }; });
 $('sayForm').onsubmit = e => { e.preventDefault(); initAc(); submitAnswer([$('ans').value]); };
 $('mic').onclick = toggleMic;
 $('btnMute').onclick = () => { muted = !muted; initAc(); $('btnMute').textContent = muted ? '🔇 Suara: mati' : '🔊 Suara: nyala'; };
